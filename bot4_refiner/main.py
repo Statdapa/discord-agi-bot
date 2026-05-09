@@ -1,5 +1,5 @@
 """
-BOT 4 — REFINER v2
+BOT 4 - REFINER v3
 """
 import os, sys, json
 sys.stdout.reconfigure(encoding='utf-8')
@@ -37,29 +37,33 @@ intents.message_content = True
 bot = commands.Bot(command_prefix="!r", intents=intents)
 
 SYSTEM_PROMPT = """
-Kamu adalah Refiner Agent — editor dan polisher profesional dalam tim AI.
-Tugasmu mengubah hasil yang sudah bagus menjadi LUAR BIASA.
+Kamu adalah Refiner Agent - editor senior dan content strategist dalam tim AI.
+Tugasmu mengubah hasil yang sudah diapprove Critic menjadi output berkualitas premium.
 
 Yang kamu lakukan:
-- Sempurnakan struktur agar mengalir natural dan mudah dibaca
-- Upgrade bahasa agar lebih profesional, persuasif, dan meyakinkan
-- Tambahkan formatting Discord yang tepat (bold, italic, bullet)
-- Hilangkan semua redundansi dan filler
-- Tambahkan Executive Summary di awal jika belum ada
-- Tambahkan Next Steps yang konkret di akhir
-- Pastikan opening kalimat langsung menarik perhatian
+- Sempurnakan struktur agar mengalir natural, logis, dan mudah dipahami
+- Tingkatkan bahasa agar lebih profesional, persuasif, dan berwibawa
+- Optimalkan formatting untuk keterbacaan maksimal
+- Eliminasi semua redundansi, filler, dan informasi tidak relevan
+- Tambahkan Executive Summary yang kuat di bagian awal jika belum ada
+- Pastikan setiap section memiliki transisi yang mulus
+- Tambahkan rekomendasi Next Steps yang konkret dan terukur di akhir
+- Pastikan kalimat pembuka langsung menarik perhatian dan relevan
 
-Tujuan: hasil harus terasa seperti dibuat oleh konsultan profesional kelas dunia.
-Gunakan Bahasa Indonesia yang excellent dan profesional.
-Maksimal 700 kata. Fokus pada kualitas premium.
+Standar output: hasil harus terasa seperti laporan konsultan profesional kelas dunia.
+Tidak ada emoji. Gunakan Bahasa Indonesia yang presisi dan berwibawa.
+Maksimal 800 kata.
 """
 
-def ask_groq(prompt):
+def ask_groq(prompt: str) -> str:
     try:
         res = groq_client.chat.completions.create(
             model="llama-3.3-70b-versatile",
-            messages=[{"role": "system", "content": SYSTEM_PROMPT}, {"role": "user", "content": prompt}],
-            temperature=0.6, max_tokens=1000,
+            messages=[
+                {"role": "system", "content": SYSTEM_PROMPT},
+                {"role": "user", "content": prompt}
+            ],
+            temperature=0.6, max_tokens=1100,
         )
         return res.choices[0].message.content
     except Exception as e:
@@ -69,8 +73,8 @@ async def send_result(channel, header, content, footer):
     await channel.send(header)
     chunks = [content[i:i+1800] for i in range(0, len(content), 1800)]
     for i, chunk in enumerate(chunks):
-        label = f"*(bagian {i+1}/{len(chunks)})*\n" if len(chunks) > 1 else ""
-        await channel.send(f"{label}{chunk}")
+        prefix = f"(bagian {i+1}/{len(chunks)})\n" if len(chunks) > 1 else ""
+        await channel.send(f"{prefix}{chunk}")
     await channel.send(footer)
 
 @bot.event
@@ -87,21 +91,23 @@ async def on_message(message):
     content = message.content
 
     if "STATUS: LANJUT_KE_REFINER" in content and "REFINER silakan poles" in content:
-        await message.channel.send("✨ **[REFINER]** Hasil diterima! Memoles menjadi output premium...")
+        await message.channel.send("**[REFINER]** Hasil approved diterima. Memproses menjadi output premium...")
         approved = load("approved_result") or load("worker_result")
 
         if not approved:
-            await message.channel.send("⚠️ **[REFINER]** Tidak ada hasil di state!")
+            await message.channel.send("**[REFINER]** Tidak ada hasil yang tersimpan di state.")
             return
 
-        refined = ask_groq(f"Poles dan jadikan output berikut jauh lebih premium:\n\n{approved}")
+        refined = ask_groq(
+            f"Poles dan tingkatkan kualitas output berikut menjadi standar profesional premium:\n\n{approved}"
+        )
         save("refined_result", refined)
 
         await send_result(
             message.channel,
-            "💎 **[REFINER → FACTCHECKER]** Hasil sudah dipoles:\n━━━━━━━━━━━━━━━━━━━━━━━━━━━",
+            "**[REFINER -> FACTCHECKER]** Hasil setelah proses refinement:\n---",
             refined,
-            "━━━━━━━━━━━━━━━━━━━━━━━━━━━\n**STATUS: MINTA_FACTCHECK**\nFACTCHECKER silakan verifikasi keakuratan."
+            "---\n**STATUS: MINTA_FACTCHECK**\nFACTCHECKER silakan verifikasi keakuratan dan konsistensi."
         )
 
 bot.run(DISCORD_TOKEN)

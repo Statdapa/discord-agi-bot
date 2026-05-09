@@ -1,5 +1,5 @@
 """
-BOT 5 — FACTCHECKER v2
+BOT 5 - FACTCHECKER v3
 """
 import os, sys, json
 sys.stdout.reconfigure(encoding='utf-8')
@@ -38,37 +38,44 @@ intents.message_content = True
 bot = commands.Bot(command_prefix="!f", intents=intents)
 
 SYSTEM_PROMPT = """
-Kamu adalah FactChecker Agent — penjaga keakuratan dan konsistensi final dalam tim AI.
-Ini adalah tahap TERAKHIR sebelum hasil dikirim ke user. Standarmu harus tinggi.
+Kamu adalah FactChecker Agent - validator akhir dalam tim AI profesional.
+Ini adalah gate terakhir sebelum output dikirim ke user. Standarmu sangat tinggi.
 
-Yang kamu verifikasi:
-1. Apakah semua argumen logis dan konsisten?
-2. Apakah tidak ada kontradiksi internal?
-3. Apakah saran/rekomendasi realistis dan bisa diimplementasikan?
-4. Apakah tidak ada klaim berlebihan yang tidak berdasar?
-5. Apakah hasil sudah menjawab task asal dengan tuntas?
+Yang kamu verifikasi secara menyeluruh:
+1. Konsistensi logika - apakah semua argumen saling mendukung dan tidak bertentangan?
+2. Kelengkapan - apakah task asal sudah dijawab secara tuntas?
+3. Realisme - apakah rekomendasi dan saran benar-benar bisa diimplementasikan?
+4. Akurasi klaim - apakah tidak ada pernyataan yang berlebihan atau tidak berdasar?
+5. Koherensi - apakah alur dan struktur output sudah optimal?
+6. Nilai tambah - apakah output ini benar-benar memberikan manfaat nyata?
 
-Format responmu WAJIB:
-🔬 **[FACTCHECKER REPORT]**
-━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Format responmu WAJIB (tanpa emoji):
 
-**VERDICT: [FINAL_APPROVED/PERLU_PERBAIKAN]**
+[FACTCHECKER REPORT]
+---
+VERDICT: [FINAL_APPROVED/PERLU_PERBAIKAN]
 
-**Hasil Verifikasi:**
-- Yang terverifikasi akurat: [poin-poin]
-- Yang perlu diklarifikasi: [jika ada, atau tulis "Tidak ada"]
+Hasil Verifikasi:
+- Terverifikasi: (poin-poin yang akurat dan solid)
+- Perlu klarifikasi: (jika ada, atau tulis: Tidak ada catatan tambahan)
 
-**Catatan untuk User:** [pesan singkat tentang kualitas hasil dan hal yang perlu diperhatikan]
+Tingkat Kepercayaan: [Tinggi/Sedang/Rendah]
 
-Maksimal 250 kata. Jika hasil sudah logis dan menjawab task → langsung FINAL_APPROVED.
+Catatan untuk User:
+(pesan profesional tentang kualitas output dan hal yang perlu diperhatikan saat implementasi)
+
+Maksimal 300 kata. Jika output sudah solid, logis, dan menjawab task dengan tuntas, langsung FINAL_APPROVED.
 """
 
-def ask_groq(prompt):
+def ask_groq(prompt: str) -> str:
     try:
         res = groq_client.chat.completions.create(
             model="llama-3.3-70b-versatile",
-            messages=[{"role": "system", "content": SYSTEM_PROMPT}, {"role": "user", "content": prompt}],
-            temperature=0.3, max_tokens=400,
+            messages=[
+                {"role": "system", "content": SYSTEM_PROMPT},
+                {"role": "user", "content": prompt}
+            ],
+            temperature=0.3, max_tokens=500,
         )
         return res.choices[0].message.content
     except Exception as e:
@@ -78,8 +85,8 @@ async def send_result(channel, header, content, footer):
     await channel.send(header)
     chunks = [content[i:i+1800] for i in range(0, len(content), 1800)]
     for i, chunk in enumerate(chunks):
-        label = f"*(bagian {i+1}/{len(chunks)})*\n" if len(chunks) > 1 else ""
-        await channel.send(f"{label}{chunk}")
+        prefix = f"(bagian {i+1}/{len(chunks)})\n" if len(chunks) > 1 else ""
+        await channel.send(f"{prefix}{chunk}")
     await channel.send(footer)
 
 @bot.event
@@ -96,15 +103,18 @@ async def on_message(message):
     content = message.content
 
     if "STATUS: MINTA_FACTCHECK" in content and "FACTCHECKER silakan verifikasi" in content:
-        await message.channel.send("🔬 **[FACTCHECKER]** Melakukan verifikasi akhir sebelum dikirim ke user...")
+        await message.channel.send("**[FACTCHECKER]** Melakukan verifikasi akhir sebelum output dikirim ke user...")
         refined = load("refined_result")
         original_task = load("original_task")
 
         if not refined:
-            await message.channel.send("⚠️ **[FACTCHECKER]** Tidak ada hasil di state!")
+            await message.channel.send("**[FACTCHECKER]** Tidak ada hasil yang tersimpan di state.")
             return
 
-        verdict = ask_groq(f"Task asal: {original_task}\n\nHasil yang perlu diverifikasi:\n{refined}")
+        verdict = ask_groq(
+            f"Task asal dari user:\n{original_task}\n\n"
+            f"Output final yang perlu diverifikasi:\n{refined}"
+        )
 
         if "VERDICT: PERLU_PERBAIKAN" in verdict:
             save("factcheck_notes", verdict)
@@ -116,17 +126,16 @@ async def on_message(message):
         else:
             result_channel = bot.get_channel(RESULT_CHANNEL_ID)
             await message.channel.send(verdict)
-            await message.channel.send("**STATUS: FINAL_APPROVED** — Mengirim ke #hasil...")
+            await message.channel.send("**STATUS: FINAL_APPROVED** - Mengirim output ke #hasil...")
 
             await send_result(
                 result_channel,
-                "━━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
-                "✅ **HASIL FINAL — DISETUJUI SEMUA AGENT**\n"
-                "━━━━━━━━━━━━━━━━━━━━━━━━━━━",
+                "---\n**OUTPUT FINAL - DISETUJUI SEMUA AGENT**\n---",
                 refined,
-                "━━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
-                "🤖 *Pipeline: Orchestrator → Worker ↔ Critic (debat) → Refiner → FactChecker*\n"
-                "━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+                "---\n"
+                f"Task: {original_task}\n"
+                "Pipeline: Orchestrator -> Worker -> Critic -> Refiner -> FactChecker\n"
+                "---"
             )
 
 bot.run(DISCORD_TOKEN)

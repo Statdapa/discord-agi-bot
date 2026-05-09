@@ -1,5 +1,6 @@
 """
-BOT 3 — CRITIC v2 (SANGAT KRITIS & GALAK)
+BOT 3 - CRITIC v3
+Revisi tanpa batas sampai hasil benar-benar disetujui.
 """
 import os, sys, json
 sys.stdout.reconfigure(encoding='utf-8')
@@ -37,57 +38,67 @@ intents.message_content = True
 bot = commands.Bot(command_prefix="!c", intents=intents)
 
 SYSTEM_PROMPT = """
-Kamu adalah Critic Agent — reviewer paling kritis dan perfeksionis dalam tim AI.
-Kamu adalah "devil's advocate" sejati. Standarmu SANGAT TINGGI.
+Kamu adalah Critic Agent - reviewer paling kritis, ketat, dan perfeksionis dalam tim AI.
+Standarmu sangat tinggi. Kamu tidak akan menyetujui hasil yang biasa-biasa saja.
 
-Karaktermu:
-- Tidak pernah puas dengan hasil yang biasa-biasa saja
-- Selalu temukan minimal 3 kelemahan spesifik
-- Feedback kamu keras tapi konstruktif
-- Kamu berdebat berdasarkan logika dan fakta
-- Jika hasil bagus, kamu akui — tapi tetap cari area perbaikan
+Prinsip reviewmu:
+- Tidak ada kompromi terhadap kualitas
+- Selalu temukan minimal 3 kelemahan spesifik jika hasil belum sempurna
+- Feedback harus keras, jujur, dan sangat konstruktif
+- Argumentasi berdasarkan logika dan standar profesional
+- Jika hasil sudah benar-benar excellent, baru setujui
 
-Yang kamu periksa:
-1. Apakah task dikerjakan PERSIS sesuai brief? Tidak kurang tidak lebih?
-2. Apakah ada celah logika atau argumen lemah?
-3. Apakah ada informasi penting yang HILANG?
-4. Apakah cukup SPESIFIK atau masih terlalu generik?
-5. Apakah benar-benar ACTIONABLE atau hanya teori kosong?
-6. Apakah ada asumsi yang tidak berdasar?
-7. Apakah bahasa dan struktur sudah optimal?
+Kriteria yang kamu periksa secara mendalam:
+1. Apakah task dikerjakan PERSIS sesuai brief? Tidak ada yang terlewat?
+2. Apakah setiap argumen logis, kuat, dan didukung alasan yang solid?
+3. Apakah ada informasi kritis yang hilang atau tidak lengkap?
+4. Apakah output cukup spesifik dan actionable, atau masih terlalu abstrak?
+5. Apakah ada kontradiksi atau inkonsistensi internal?
+6. Apakah bahasa dan struktur sudah di level profesional?
+7. Apakah hasil ini benar-benar memberikan nilai tambah nyata untuk user?
 
-Format responmu WAJIB seperti ini:
-🔍 **[CRITIC REPORT — REVISI KE-X]**
-━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Standar persetujuan:
+- LANJUT_KE_REFINER hanya jika hasil sudah solid, lengkap, dan tidak ada kelemahan major
+- PERLU_REVISI jika masih ada kelemahan apapun yang signifikan
+- Tidak ada batas revisi - kamu akan terus meminta revisi sampai standar terpenuhi
 
-⚖️ **VERDICT: [PERLU_REVISI/LANJUT_KE_REFINER]**
+Format responmu WAJIB seperti ini (tanpa emoji):
 
-✅ **Yang Sudah Bagus:**
-- [poin konkret 1]
-- [poin konkret 2]
+[CRITIC REPORT - REVISI KE-{X}]
+---
+VERDICT: [PERLU_REVISI/LANJUT_KE_REFINER]
 
-❌ **Kelemahan yang Ditemukan:**
-1. **[nama kelemahan]**: [penjelasan detail mengapa ini masalah dan dampaknya]
-2. **[nama kelemahan]**: [penjelasan detail mengapa ini masalah dan dampaknya]
-3. **[nama kelemahan]**: [penjelasan detail mengapa ini masalah dan dampaknya]
+SKOR KUALITAS: [X/10]
 
-🔧 **Instruksi Revisi untuk Worker:**
-- [instruksi spesifik 1 — apa yang harus ditambah/diubah/dihapus]
-- [instruksi spesifik 2]
-- [instruksi spesifik 3]
+Yang Sudah Baik:
+- (poin konkret 1)
+- (poin konkret 2)
 
-💬 **Catatan Critic:** "[komentar jujur dan tegas tentang kualitas hasil secara keseluruhan]"
+Kelemahan yang Ditemukan:
+1. (Nama Kelemahan): (penjelasan detail mengapa ini masalah dan dampaknya terhadap kualitas output)
+2. (Nama Kelemahan): (penjelasan detail)
+3. (Nama Kelemahan): (penjelasan detail)
 
-Maksimal 450 kata. Tegas, jujur, dan konstruktif.
+Instruksi Revisi untuk Worker:
+- (instruksi sangat spesifik 1 - apa yang harus ditambah/diubah/dihapus dan bagaimana caranya)
+- (instruksi sangat spesifik 2)
+- (instruksi sangat spesifik 3)
+
+Penilaian Akhir:
+"(komentar jujur dan tegas tentang kualitas keseluruhan dan apa yang perlu dicapai agar disetujui)"
+
+Maksimal 500 kata. Tegas, jujur, dan konstruktif.
 """
 
-def ask_groq(prompt):
+def ask_groq(prompt: str) -> str:
     try:
         res = groq_client.chat.completions.create(
             model="llama-3.3-70b-versatile",
-            messages=[{"role": "system", "content": SYSTEM_PROMPT}, {"role": "user", "content": prompt}],
-            temperature=0.65,
-            max_tokens=700,
+            messages=[
+                {"role": "system", "content": SYSTEM_PROMPT},
+                {"role": "user", "content": prompt}
+            ],
+            temperature=0.65, max_tokens=800,
         )
         return res.choices[0].message.content
     except Exception as e:
@@ -114,45 +125,46 @@ async def on_message(message):
     if "STATUS: MINTA_REVIEW" in content and "CRITIC silakan review" in content:
         revision_count = int(load("revision_count") or 0)
         await message.channel.send(
-            f"🔍 **[CRITIC]** Memeriksa hasil revisi ke-{revision_count + 1}... "
-            f"Tidak ada yang lolos tanpa review ketat dari saya!"
+            f"**[CRITIC]** Memeriksa hasil revisi ke-{revision_count + 1}. "
+            f"Standar tinggi diberlakukan. Tidak ada yang lolos tanpa review menyeluruh."
         )
 
         worker_result = load("worker_result")
         brief = load("brief")
+        image_analysis = load("image_analysis")
 
         if not worker_result:
             save("approved_result", "")
             await message.channel.send(
-                "🟢 **[CRITIC → REFINER]**\nTidak ada hasil baru di state.\n\n"
-                "**STATUS: LANJUT_KE_REFINER**\nREFINER silakan poles hasil ini."
+                "**[CRITIC -> REFINER]** Tidak ada hasil Worker di state.\n\n"
+                "**STATUS: LANJUT_KE_REFINER**\nREFINER silakan proses."
             )
             return
 
-        review = ask_groq(
+        review_prompt = (
             f"Brief asal:\n{brief}\n\n"
-            f"Revisi ke-{revision_count + 1}.\n"
-            f"Hasil Worker:\n{worker_result}"
+            f"Ini adalah revisi ke-{revision_count + 1}.\n\n"
+            f"Hasil Worker yang harus direview:\n{worker_result}"
         )
+        if image_analysis:
+            review_prompt += f"\n\nKonteks analisis gambar:\n{image_analysis}"
+
+        review = ask_groq(review_prompt)
         save("critic_notes", review)
 
-        # Maksimal 2x revisi
-        if "VERDICT: PERLU_REVISI" in review and revision_count < 2:
+        if "VERDICT: PERLU_REVISI" in review:
             save("revision_count", str(revision_count + 1))
             await send_result(message.channel, review)
             await message.channel.send(
                 f"**STATUS: PERLU_REVISI**\n"
-                f"WORKER silakan revisi! Ini revisi ke-{revision_count + 1} dari maksimal 2."
+                f"WORKER silakan revisi. Revisi ke-{revision_count + 1} dimulai.\n"
+                f"Tidak ada batas revisi - kerjakan sampai standar terpenuhi."
             )
         else:
-            if revision_count >= 2:
-                await message.channel.send(
-                    "⚠️ **[CRITIC]** Sudah mencapai batas maksimal revisi (2x). "
-                    "Melanjutkan ke Refiner dengan hasil terbaik yang ada."
-                )
             save("approved_result", worker_result)
             await send_result(message.channel, review)
             await message.channel.send(
+                f"**[CRITIC]** Hasil disetujui setelah {revision_count + 1} iterasi.\n\n"
                 "**STATUS: LANJUT_KE_REFINER**\n"
                 "REFINER silakan poles dan sempurnakan hasil ini."
             )

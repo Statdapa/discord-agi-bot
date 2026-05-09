@@ -1,6 +1,6 @@
 """
-BOT 6 — REMINDER & JADWAL HARIAN
-Otomatis kirim reminder pagi 07.00 WIB dan malam 20.00 WIB
+BOT 6 - REMINDER v3
+Jadwal harian otomatis 07.00 dan 20.00 WIB. Tanpa emoji.
 """
 import os, sys
 sys.stdout.reconfigure(encoding='utf-8')
@@ -27,35 +27,36 @@ LEARNING_TOPICS = [
     "Dasar Machine Learning: supervised vs unsupervised learning",
     "Neural Network: backpropagation dan gradient descent",
     "Python untuk AI: NumPy, Pandas, Matplotlib",
-    "Deep Learning dengan PyTorch: buat model pertama",
+    "Deep Learning dengan PyTorch: membangun model pertama",
     "Natural Language Processing: tokenisasi dan word embedding",
-    "Transformer Architecture: cara kerja attention mechanism",
+    "Transformer Architecture: mekanisme attention",
     "Fine-tuning LLM dengan dataset sendiri",
-    "Multi-agent System: cara agent AI berkomunikasi",
+    "Multi-agent System: koordinasi antar agent AI",
     "Reinforcement Learning: reward, policy, dan Q-learning",
-    "AI Alignment: mengapa AI yang aman itu penting",
-    "Prompt Engineering: teknik terbaik berinteraksi dengan LLM",
+    "AI Alignment: pentingnya keamanan dalam pengembangan AI",
+    "Prompt Engineering: teknik optimal berinteraksi dengan LLM",
     "Membangun REST API AI dengan FastAPI",
-    "Vector Database dan RAG System: Pinecone & Chroma",
-    "Computer Vision: CNN dan object detection",
-    "Membangun startup AI: dari ide ke produk",
+    "Vector Database dan RAG System",
+    "Computer Vision: CNN dan deteksi objek",
+    "Membangun startup AI: dari konsep ke produk",
 ]
 
 MORNING_SYSTEM = """
-Kamu adalah mentor AI yang semangat dan supportif untuk anak muda 19-22 tahun
-yang bermimpi membangun perusahaan AI sendiri.
+Kamu adalah mentor AI profesional untuk seorang pemuda berusia 19-22 tahun
+yang sedang membangun karir di bidang AI dan bermimpi mendirikan perusahaan AI sendiri.
 
-Buat reminder pagi yang energetik, personal, dan memotivasi.
-Gunakan Bahasa Indonesia yang natural dan penuh semangat.
-Gunakan emoji yang pas. Format harus rapi dan mudah dibaca di Discord.
+Buat jadwal harian pagi yang terstruktur, motivatif, dan actionable.
+Gunakan Bahasa Indonesia yang profesional namun tetap hangat dan mendorong.
+Tidak ada emoji. Format harus rapi dan mudah dibaca.
 """
 
 EVENING_SYSTEM = """
-Kamu adalah mentor AI yang bijak dan suportif untuk anak muda 19-22 tahun
-yang bermimpi membangun perusahaan AI.
+Kamu adalah mentor AI profesional untuk seorang pemuda berusia 19-22 tahun
+yang sedang membangun karir di bidang AI.
 
-Buat reminder malam yang reflektif, tenang, dan memotivasi.
-Gunakan Bahasa Indonesia yang hangat. Gunakan emoji yang pas.
+Buat review malam yang reflektif, evaluatif, dan memotivasi untuk hari esok.
+Gunakan Bahasa Indonesia yang profesional namun tetap hangat.
+Tidak ada emoji.
 """
 
 def get_topic():
@@ -65,7 +66,10 @@ def ask_groq(system, prompt):
     try:
         res = groq_client.chat.completions.create(
             model="llama-3.3-70b-versatile",
-            messages=[{"role": "system", "content": system}, {"role": "user", "content": prompt}],
+            messages=[
+                {"role": "system", "content": system},
+                {"role": "user", "content": prompt}
+            ],
             temperature=0.8, max_tokens=800,
         )
         return res.choices[0].message.content
@@ -79,30 +83,31 @@ def build_morning():
 Hari ini: {today}
 Topik belajar hari ini: {topic}
 
-Buat reminder pagi dalam format ini:
+Buat jadwal harian pagi dalam format berikut:
 
-🌅 **SELAMAT PAGI, FUTURE AI FOUNDER!** ✨
-📅 {today}
-━━━━━━━━━━━━━━━━━━━━━━━━━━━
+SELAMAT PAGI
+Tanggal: {today}
+---
 
-📚 **BELAJAR HARI INI** (1-2 jam)
-→ Topik: **{topic}**
-→ [1 tip spesifik cara belajar topik ini]
-→ Resource: [saran resource gratis untuk belajar topik ini]
+AGENDA BELAJAR (1-2 jam)
+Topik: {topic}
+Panduan belajar: (1 tip spesifik dan efektif untuk mempelajari topik ini)
+Sumber rekomendasi: (sumber gratis yang relevan)
 
-💻 **PRAKTEK** (1 jam)
-→ [1 tugas coding konkret yang relevan dengan topik hari ini]
+SESI PRAKTEK (1 jam)
+Tugas: (1 tugas coding konkret yang relevan dengan topik hari ini)
 
-🌐 **UPDATE DUNIA AI** (15 menit)
-→ [saran topik/keyword untuk dicari di Google/X hari ini]
+UPDATE INDUSTRI (15 menit)
+Fokus: (topik atau keyword spesifik yang perlu dicari hari ini di berita AI/tech)
 
-💪 **MOTIVASI HARI INI**
-→ [kutipan dari tokoh AI dunia atau original, yang relevan dengan perjalanan membangun company AI]
+MOTIVASI HARI INI
+(kutipan atau insight dari tokoh AI dunia yang relevan dengan perjalanan membangun perusahaan AI)
 
-🎯 **TARGET HARI INI:**
-→ [1 target spesifik dan terukur]
+TARGET HARI INI
+(1 target spesifik, terukur, dan realistis untuk dicapai hari ini)
 
-Semangat terus! Setiap hari adalah investasi untuk masa depanmu! 🚀
+---
+Setiap hari adalah investasi untuk masa depan yang sedang kamu bangun.
 """
     return ask_groq(MORNING_SYSTEM, prompt)
 
@@ -113,31 +118,30 @@ def build_evening():
 Hari ini: {today}
 Topik yang seharusnya dipelajari: {topic}
 
-Buat reminder malam dalam format ini:
+Buat review malam dalam format berikut:
 
-🌙 **REVIEW MALAM** — Saatnya evaluasi diri!
-📅 {today}
-━━━━━━━━━━━━━━━━━━━━━━━━━━━
+REVIEW HARIAN
+Tanggal: {today}
+---
 
-✅ **Checklist Hari Ini:**
-□ Belajar: {topic}
-□ Praktek coding
-□ Update berita AI/tech
-□ Minum air yang cukup
+CHECKLIST HARI INI
+[ ] Belajar: {topic}
+[ ] Sesi praktek coding
+[ ] Update berita AI dan teknologi
 
-💭 **Refleksi Malam:**
-→ [pertanyaan refleksi yang mendalam tentang progress hari ini]
-→ [pertanyaan tentang langkah menuju mimpi company AI]
+PERTANYAAN REFLEKSI
+1. (pertanyaan mendalam tentang progress belajar AI hari ini)
+2. (pertanyaan tentang langkah nyata menuju pendirian perusahaan AI)
 
-📈 **Insight Hari Ini:**
-→ [satu insight atau pelajaran hidup tentang membangun startup AI]
+INSIGHT HARI INI
+(satu pelajaran atau perspektif berharga tentang membangun karir di AI)
 
-🔋 **Persiapan Besok:**
-→ Topik besok: [topik AI yang bisa disiapkan malam ini]
-→ [1 hal konkret yang bisa disiapkan malam ini]
-→ Tidur yang cukup ya! Otak yang istirahat = belajar lebih efektif
+PERSIAPAN BESOK
+Topik besok: (topik AI lanjutan yang bisa disiapkan malam ini)
+Tindakan: (1 hal konkret yang bisa dilakukan malam ini untuk hari esok yang lebih produktif)
 
-Konsistensi kecil setiap hari mengalahkan sprint besar sesekali! 💫
+---
+Konsistensi harian adalah fondasi dari pencapaian luar biasa.
 """
     return ask_groq(EVENING_SYSTEM, prompt)
 
@@ -148,16 +152,14 @@ async def on_ready():
 
 @bot.command(name="reminder")
 async def manual_reminder(ctx):
-    """Ketik !reminder untuk dapat reminder pagi sekarang."""
-    await ctx.send("📋 Menyiapkan reminder untukmu...")
+    await ctx.send("Menyiapkan jadwal harian...")
     reminder = build_morning()
     channel = bot.get_channel(REMINDER_CHANNEL_ID)
     await channel.send(reminder)
 
 @bot.command(name="malam")
 async def manual_evening(ctx):
-    """Ketik !malam untuk dapat review malam sekarang."""
-    await ctx.send("🌙 Menyiapkan review malam...")
+    await ctx.send("Menyiapkan review malam...")
     reminder = build_evening()
     channel = bot.get_channel(REMINDER_CHANNEL_ID)
     await channel.send(reminder)
@@ -167,20 +169,14 @@ async def scheduler():
     now = datetime.now(WIB)
     if now.minute != 0:
         return
-
     channel = bot.get_channel(REMINDER_CHANNEL_ID)
     if not channel:
-        print(f"Channel {REMINDER_CHANNEL_ID} tidak ditemukan!")
         return
-
     if now.hour == 7:
-        print("Mengirim reminder pagi...")
-        msg = build_morning()
-        await channel.send(msg)
-
+        print("Mengirim jadwal pagi...")
+        await channel.send(build_morning())
     elif now.hour == 20:
-        print("Mengirim reminder malam...")
-        msg = build_evening()
-        await channel.send(msg)
+        print("Mengirim review malam...")
+        await channel.send(build_evening())
 
 bot.run(DISCORD_TOKEN)
